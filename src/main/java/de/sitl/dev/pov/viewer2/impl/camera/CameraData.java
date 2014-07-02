@@ -5,32 +5,57 @@ import java.util.Set;
 
 import de.sitl.dev.pov.viewer2.api.camera.CameraChangeListener;
 import de.sitl.dev.pov.viewer2.api.camera.CameraChangedEvent;
+import de.sitl.dev.pov.viewer2.api.camera.ImmutableCamera;
 import de.sitl.dev.pov.viewer2.api.camera.ReadWritableCamera;
+import de.sitl.dev.pov.viewer2.api.camera.ReadableCamera;
+import de.sitl.dev.pov.viewer2.api.scene.ImmutableScene;
+import de.sitl.dev.pov.viewer2.api.scene.ReadableScene;
 import de.sitl.dev.pov.viewer2.api.scene.Scene;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 
 @Data
+@RequiredArgsConstructor
 public class CameraData implements ReadWritableCamera {
     
-    private double x, y, z;
-    private double phi, theta;
-    private double fOV;
-    private double levelOfDetail;
+    double x, y, z;
+    double phi, theta;
+    double fOV = 90;
+    double levelOfDetail;
     
     @Getter(AccessLevel.NONE)
     private boolean spotlight;
     
-    private Scene scene;
+    private final ReadableScene scene;
     
-    private Set<CameraChangeListener> listeners = new LinkedHashSet<>();
-
     @Override
     public boolean hasSpotlight() {
         return this.spotlight;
     }
+    
+    /**
+     * Copy-like constructor.
+     * 
+     * @param camera
+     *            camera to copy from
+     */
+    public CameraData(ReadableCamera camera) {
+        this.x = camera.getX();
+        this.y = camera.getY();
+        this.z = camera.getZ();
+        this.phi = camera.getPhi();
+        this.theta = camera.getTheta();
+        this.fOV = camera.getFOV();
+        this.levelOfDetail = camera.getLevelOfDetail();
+        this.spotlight = camera.hasSpotlight();
+        this.scene = camera.getScene();
+    }
 
+    private Set<CameraChangeListener> listeners = new LinkedHashSet<>();
+    
     @Override
     public final void setX(double x) {
         this.x = x;
@@ -81,8 +106,7 @@ public class CameraData implements ReadWritableCamera {
     
     @Override
     public final void setScene(Scene scene) {
-        this.scene = scene;
-        this.fireStateChanged();
+        throw new Error("Not implemented, needs thought!");
     }
 
     @Override
@@ -103,6 +127,25 @@ public class CameraData implements ReadWritableCamera {
         for (CameraChangeListener listener : this.listeners) {
             listener.stateChanged(event);
         }
+    }
+
+    @Override
+    public ImmutableCamera getAsImmutableCamera() {
+        return new ImmutableCameraImplementation(this);
+    }
+
+    @Override
+    public String getAsString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<").append(this.x).append(",").append(this.y).append(",")
+            .append(this.z).append(">");
+        sb.append("<").append(this.phi).append(",").append(this.theta)
+            .append(">");
+        sb.append("[").append(this.fOV).append("]");
+        sb.append("[").append(this.spotlight).append("]");
+        sb.append("(").append(this.scene.getName()).append(")");
+        sb.append("[").append(this.levelOfDetail).append("]");
+        return sb.toString();
     }
 
 }

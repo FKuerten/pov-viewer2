@@ -2,10 +2,13 @@ package de.sitl.dev.pov.viewer2.impl.roundingcamera;
 
 import lombok.Data;
 import lombok.experimental.Delegate;
+import de.sitl.dev.pov.viewer2.api.camera.ImmutableCamera;
 import de.sitl.dev.pov.viewer2.api.camera.WritableCamera;
 import de.sitl.dev.pov.viewer2.api.camera.ReadWritableCamera;
 import de.sitl.dev.pov.viewer2.api.roundingcamera.ReadWritableRoundingCamera;
+import de.sitl.dev.pov.viewer2.api.scene.ReadableScene;
 import de.sitl.dev.pov.viewer2.api.scene.Scene;
+import de.sitl.dev.pov.viewer2.impl.camera.ImmutableCameraImplementation;
 
 @Data
 public class RoundedCameraDecorator implements ReadWritableRoundingCamera {
@@ -77,13 +80,32 @@ public class RoundedCameraDecorator implements ReadWritableRoundingCamera {
     }
     
     @Override
-    public Scene getScene() {
+    public ReadableScene getScene() {
         return this.camera.getScene();
     }
     
     @Override
     public boolean hasSpotlight() {
         return this.camera.hasSpotlight();
+    }
+
+    @Override
+    public ImmutableCamera getAsImmutableCamera() {
+        return new ImmutableCameraImplementation(this);
+    }
+    
+    @Override
+    public String getAsString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("<").append(this.getX()).append(",").append(this.getY())
+            .append(",").append(this.getZ()).append(">");
+        sb.append("<").append(this.getPhi()).append(",")
+            .append(this.getTheta()).append(">");
+        sb.append("[").append(this.getFOV()).append("]");
+        sb.append("[").append(this.hasSpotlight()).append("]");
+        sb.append("(").append(this.getScene().getName()).append(")");
+        sb.append("[").append(this.getLevelOfDetail()).append("]");
+        return sb.toString();
     }
 
 }

@@ -1,5 +1,6 @@
 package de.sitl.dev.pov.viewer2.api.camera;
 
+import de.sitl.dev.pov.viewer2.api.scene.ReadableScene;
 import de.sitl.dev.pov.viewer2.api.scene.Scene;
 
 /**
@@ -60,7 +61,7 @@ public interface ReadableCamera extends Camera {
     /**
      * @return scene
      */
-    public abstract Scene getScene();
+    public abstract ReadableScene getScene();
     
     /**
      * A spotlight illuminates the objects in front of the camera.
@@ -68,4 +69,11 @@ public interface ReadableCamera extends Camera {
      * @return spotlight enabled
      */
     public boolean hasSpotlight();
+    
+    ImmutableCamera getAsImmutableCamera();
+    
+    /**
+     * @return an equality preserving string
+     */
+    String getAsString();
 }
