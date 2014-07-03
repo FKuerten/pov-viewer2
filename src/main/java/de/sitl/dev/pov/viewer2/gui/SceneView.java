@@ -16,6 +16,7 @@ import de.sitl.dev.pov.viewer2.api.camera.ReadWritableCamera;
 import de.sitl.dev.pov.viewer2.api.imageSource.ChangingImage;
 import de.sitl.dev.pov.viewer2.api.imageSource.ImageChangeListener;
 import de.sitl.dev.pov.viewer2.api.imageSource.ImageSource;
+import de.sitl.dev.pov.viewer2.api.roundingcamera.ReadableRoundingCamera;
 
 public class SceneView extends JPanel {
     
@@ -59,11 +60,14 @@ public class SceneView extends JPanel {
         new PanelComponentListener();
 
     private ChangingImage changingImage;
+    private ReadableRoundingCamera roundingCamera;
 
     private BufferedImage image;
     
-    public SceneView(ReadWritableCamera camera, ImageSource imageSource) {
+    public SceneView(ReadWritableCamera camera,
+            ReadableRoundingCamera roundingCamera, ImageSource imageSource) {
         this.camera = camera;
+        this.roundingCamera = roundingCamera;
         this.imageSource = imageSource;
         this.camera.addChangeListener(this.cameraChangeListener);
         this.addComponentListener(this.componentListener);
@@ -71,9 +75,13 @@ public class SceneView extends JPanel {
     }
     
     void resetImage() {
+        if (this.changingImage != null) {
+            this.changingImage.abort();
+            this.changingImage = null;
+        }
         this.image = null;
         final ImmutableCamera immutableCamera =
-            this.camera.getAsImmutableCamera();
+            this.roundingCamera.getAsImmutableCamera();
         final int viewW = this.getWidth();
         final int viewH = this.getHeight();
         if (viewW > 0 && viewH > 0) {

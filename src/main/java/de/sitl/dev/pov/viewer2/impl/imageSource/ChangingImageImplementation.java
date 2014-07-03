@@ -98,14 +98,30 @@ public class ChangingImageImplementation implements ChangingImage {
             final int nh = this.h > 1 ? this.h / 2 : 1;
             return new WH(nw, nh);
         }
+        
+        public boolean isSmallest() {
+            return this.w == 1 && this.h == 1;
+        }
+
+        @Override
+        public String toString() {
+            return String.format("(%d,%d)", this.w, this.h);
+        }
     }
     
     void work() {
         // Generate progression
         final List<WH> sizes = new ArrayList<>();
         WH current = new WH(this.requestedWidth, this.requestedHeight);
-        while (current.w > 1 || current.h > 1) {
+        while (true) {
             sizes.add(0, current);
+            if (this.source.hasImage(this.camera, current.w, current.h)) {
+                // image available, break
+                break;
+            }
+            if (current.isSmallest()) {
+                break;
+            }
             current = current.half();
         }
         
@@ -148,7 +164,7 @@ public class ChangingImageImplementation implements ChangingImage {
             && this.getCurrentHeight() == this.getRequestedHeight();
     }
 
-    void abort() {
+    public void abort() {
         this.aborted = true;
     }
 

@@ -26,4 +26,6 @@ public interface ChangingImage {
     
     boolean isAborted();
 
+    void abort();
+
 }

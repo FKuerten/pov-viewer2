@@ -43,8 +43,7 @@ public class PovRayImageSource extends AbstractImageSource {
                 .println();
             p.format(Locale.ENGLISH, "\trotate %f * y", -c.getPhi()).println();
             p.format(Locale.ENGLISH, "\ttranslate <%.2f, %.2f, %.2f>",
-                c.getX(),
-                c.getY(), c.getZ()).println();
+                c.getX(), c.getY(), c.getZ()).println();
         }
         p.println("}");
     }
@@ -89,6 +88,16 @@ public class PovRayImageSource extends AbstractImageSource {
             pw.close();
         }
     }
+    
+    boolean hasImage(ImmutableCamera camera, int w, int h) {
+        final String baseName = getBaseName(camera, w, h);
+        final String iniFileName = baseName.concat(".cam.ini");
+        final String povFileName = baseName.concat(".cam.pov");
+        final String imageFileName = baseName.concat(".cam.png");
+        File iniFile = new File(this.directory, iniFileName);
+        File povFile = new File(this.directory, povFileName);
+        return !this.needsRebuild(iniFile, povFile, imageFileName);
+    }
 
     @Override
     BufferedImage getImage(ImmutableCamera camera, int w, int h) {
@@ -112,16 +121,8 @@ public class PovRayImageSource extends AbstractImageSource {
     
     private BufferedImage conditionallyCreateImage(File iniFile, File povFile,
             String imageFileName) {
-        boolean needsRebuild = true;
+        boolean needsRebuild = needsRebuild(iniFile, povFile, imageFileName);
         File imageFile = new File(this.directory, imageFileName);
-        if (imageFile.exists()) {
-            long changeTime =
-                Math.max(iniFile.lastModified(), povFile.lastModified());
-            if (imageFile.lastModified() > changeTime) {
-                // no rebuild needed
-                needsRebuild = false;
-            }
-        }
         if (needsRebuild) {
             this.unconditionallyCreateImage(iniFile, povFile, imageFile);
         }
@@ -131,6 +132,23 @@ public class PovRayImageSource extends AbstractImageSource {
         } catch (IOException e) {
             throw new Error(e);
         }
+    }
+    
+    private boolean needsRebuild(File iniFile, File povFile,
+            String imageFileName) {
+        File imageFile = new File(this.directory, imageFileName);
+        if (!iniFile.exists() || !povFile.exists()) {
+            return true;
+        }
+        if (imageFile.exists()) {
+            long changeTime =
+                Math.max(iniFile.lastModified(), povFile.lastModified());
+            if (imageFile.lastModified() > changeTime) {
+                // no rebuild needed
+                return false;
+            }
+        }
+        return true;
     }
     
     private void unconditionallyCreateImage(File iniFile, File povFile,

@@ -29,4 +29,6 @@ public abstract class AbstractImageSource implements ImageSource {
 
     abstract BufferedImage getImage(ImmutableCamera camera, int w, int h);
 
+    abstract boolean hasImage(ImmutableCamera camera, int w, int h);
+
 }

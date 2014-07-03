@@ -19,7 +19,7 @@ public class MainFrame extends JFrame {
         this.camera = camera;
         
         this.setLayout(new BorderLayout());
-        this.sceneView = new SceneView(camera, imageSource);
+        this.sceneView = new SceneView(camera, roundingCamera, imageSource);
         this.cameraStatusView = new CameraStatusView(camera, roundingCamera);
         
         this.add(this.sceneView, BorderLayout.CENTER);
