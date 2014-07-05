@@ -17,8 +17,8 @@ public class RoundedCameraDecorator implements ReadWritableRoundingCamera {
     private final ReadWritableCamera camera;
     
     private double smallestCoordinateStep = 1;
-    private double smallestPhiStep = 15;
-    private double smallestThetaStep = 15;
+    private double smallestPhiStep = 360.0 / 16 / 2;
+    private double smallestThetaStep = 180.0 / 8 / 2;
     private double smallestFOVStep = 5;
     private double smallestLODStep = 0.1;
     

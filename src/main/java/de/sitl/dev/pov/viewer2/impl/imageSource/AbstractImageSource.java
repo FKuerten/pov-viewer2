@@ -1,8 +1,10 @@
 package de.sitl.dev.pov.viewer2.impl.imageSource;
 
 import java.awt.image.BufferedImage;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.Set;
+import java.util.WeakHashMap;
 
 import de.sitl.dev.pov.viewer2.api.camera.ImmutableCamera;
 import de.sitl.dev.pov.viewer2.api.imageSource.ChangingImage;
@@ -10,7 +12,8 @@ import de.sitl.dev.pov.viewer2.api.imageSource.ImageSource;
 
 public abstract class AbstractImageSource implements ImageSource {
     
-    Set<ChangingImageImplementation> activeImages = new LinkedHashSet<>();
+    Set<ChangingImageImplementation> activeImages = Collections
+        .newSetFromMap(new WeakHashMap<ChangingImageImplementation, Boolean>());
 
     @Override
     public ChangingImage requestImage(ImmutableCamera camera, int w, int h) {

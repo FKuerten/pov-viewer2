@@ -3,8 +3,18 @@ package de.sitl.dev.pov.viewer2.gui;
 import java.awt.Graphics;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.KeyListener;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
 import java.io.IOException;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.LinkedHashSet;
+import java.util.Set;
 
 import javax.swing.JPanel;
 
@@ -31,7 +41,7 @@ public class SceneView extends JPanel {
 
         @Override
         public void imageChanged() {
-            SceneView.this.updateImage();
+            SceneView.this.repaint();
         }
         
     }
@@ -43,13 +53,80 @@ public class SceneView extends JPanel {
             SceneView.this.validate();
             SceneView.this.resetImage();
         }
+    }
+    
+    class KeyListenerImplementation extends KeyAdapter {
+        
+        @SuppressWarnings("boxing")
+        @Override
+        public void keyPressed(KeyEvent e) {
+            SceneView.this.keys.add(e.getKeyCode());
+        }
+        
+        @SuppressWarnings("boxing")
+        @Override
+        public void keyReleased(KeyEvent e) {
+            SceneView.this.keys.remove(e.getKeyCode());
+        }
+        
+    }
+    
+    class MouseListenerImplementation extends MouseAdapter {
+        
+        @Override
+        public void mouseClicked(MouseEvent e) {
+            SceneView.this.requestFocusInWindow();
+        }
         
     }
 
-    private final ReadWritableCamera camera;
-    
-    private final ImageSource imageSource;
-    
+    class KeyRunnable implements Runnable {
+        
+        @SuppressWarnings("boxing")
+        @Override
+        public void run() {
+            final Set<Integer> keys = SceneView.this.keys;
+            final ReadWritableCamera camera = SceneView.this.camera;
+            long lastTime = System.currentTimeMillis();
+            while (true) {
+                long current = System.currentTimeMillis();
+                long delta = current - lastTime;
+                double dt = delta / 1000d;
+                final boolean forward = keys.contains(KeyEvent.VK_W);
+                final boolean backward = keys.contains(KeyEvent.VK_S);
+                if (forward && !backward) {
+                    camera.strafeForward(1 * dt);
+                } else if (!forward && backward) {
+                    camera.strafeForward(-1 * dt);
+                }
+                final boolean strafeLeft = keys.contains(KeyEvent.VK_A);
+                final boolean strafeRight = keys.contains(KeyEvent.VK_D);
+                if (strafeLeft && !strafeRight) {
+                    camera.strafeLeft(1 * dt);
+                } else if (!strafeLeft && strafeRight) {
+                    camera.strafeLeft(-1 * dt);
+                }
+                final boolean lookLeft = keys.contains(KeyEvent.VK_LEFT);
+                final boolean lookRight = keys.contains(KeyEvent.VK_RIGHT);
+                if (lookLeft && !lookRight) {
+                    camera.rotateCW(15 * dt);
+                } else if (!lookLeft && lookRight) {
+                    camera.rotateCW(-15 * dt);
+                }
+                
+                lastTime = current;
+                if (!SceneView.this.active) {
+                    break;
+                }
+                try {
+                    Thread.sleep(50);
+                } catch (InterruptedException e) {
+                    // huh?
+                }
+            }
+        }
+    }
+
     private final CameraChangeListener cameraChangeListener =
         new CameraChangeListenerImplementation();
     
@@ -58,12 +135,27 @@ public class SceneView extends JPanel {
     
     private final PanelComponentListener componentListener =
         new PanelComponentListener();
+    
+    private final KeyListener keyListener = new KeyListenerImplementation();
+    
+    private final MouseListener mouseListener =
+        new MouseListenerImplementation();
+
+    Set<Integer> keys = Collections.synchronizedSet(new HashSet<Integer>());
+    
+    private final Thread keyThread;
+
+    final ReadWritableCamera camera;
+    
+    private final ImageSource imageSource;
 
     private ChangingImage changingImage;
     private ReadableRoundingCamera roundingCamera;
-
-    private BufferedImage image;
     
+    private final Object[] imageLock = new Object[0];
+    
+    boolean active = true;
+
     public SceneView(ReadWritableCamera camera,
             ReadableRoundingCamera roundingCamera, ImageSource imageSource) {
         this.camera = camera;
@@ -71,41 +163,46 @@ public class SceneView extends JPanel {
         this.imageSource = imageSource;
         this.camera.addChangeListener(this.cameraChangeListener);
         this.addComponentListener(this.componentListener);
+        this.addKeyListener(this.keyListener);
+        this.setFocusable(true);
+        this.addMouseListener(this.mouseListener);
+        this.keyThread = new Thread(new KeyRunnable());
+        this.keyThread.start();
         this.resetImage();
     }
     
     void resetImage() {
-        if (this.changingImage != null) {
-            this.changingImage.abort();
-            this.changingImage = null;
-        }
-        this.image = null;
         final ImmutableCamera immutableCamera =
             this.roundingCamera.getAsImmutableCamera();
         final int viewW = this.getWidth();
         final int viewH = this.getHeight();
         if (viewW > 0 && viewH > 0) {
-            this.changingImage =
+            ChangingImage newChangingImage =
                 this.imageSource.requestImage(immutableCamera, viewW, viewH);
-            this.changingImage.addChangeListener(this.imageChangeListener);
-            this.updateImage();
-        }
-    }
-    
-    void updateImage() {
-        final BufferedImage newImage = this.changingImage.getBestImage();
-        if (newImage != this.image) {
-            this.image = newImage;
+            newChangingImage.addChangeListener(this.imageChangeListener);
+            synchronized (this.imageLock) {
+                if (this.changingImage != null) {
+                    this.changingImage.abort();
+                    this.changingImage = null;
+                }
+                this.changingImage = newChangingImage;
+            }
             this.repaint();
         }
     }
-
+    
     @Override
     protected void paintComponent(final Graphics g) {
-        if (this.image != null) {
-            final int viewW = this.getWidth();
-            final int viewH = this.getHeight();
-            g.drawImage(this.image, 0, 0, viewW, viewH, null);
+        synchronized (this.imageLock) {
+            if (this.changingImage != null) {
+                final BufferedImage newImage =
+                    this.changingImage.getBestImage();
+                if (newImage != null) {
+                    final int viewW = this.getWidth();
+                    final int viewH = this.getHeight();
+                    g.drawImage(newImage, 0, 0, viewW, viewH, null);
+                }
+            }
         }
     }
 }

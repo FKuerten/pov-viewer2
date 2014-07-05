@@ -126,12 +126,22 @@ public class PovRayImageSource extends AbstractImageSource {
         if (needsRebuild) {
             this.unconditionallyCreateImage(iniFile, povFile, imageFile);
         }
-        assert imageFile.exists();
-        try {
-            return ImageIO.read(imageFile);
-        } catch (IOException e) {
-            throw new Error(e);
+        for (int i = 0; i < 100; i++ ) {
+            if (imageFile.exists()) {
+                try {
+                    return ImageIO.read(imageFile);
+                } catch (IOException e) {
+                    // retry later
+                }
+            } else {
+                try {
+                    Thread.sleep(10);
+                } catch (InterruptedException e) {
+                    
+                }
+            }
         }
+        throw new Error("No file found.");
     }
     
     private boolean needsRebuild(File iniFile, File povFile,
@@ -159,7 +169,7 @@ public class PovRayImageSource extends AbstractImageSource {
         
         ProcessBuilder pb = new ProcessBuilder(args);
         pb.directory(this.directory);
-        pb.inheritIO();
+        // pb.inheritIO();
         
         try {
             Process p = pb.start();

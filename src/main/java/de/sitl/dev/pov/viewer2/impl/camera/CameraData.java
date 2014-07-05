@@ -56,6 +56,22 @@ public class CameraData implements ReadWritableCamera {
 
     private Set<CameraChangeListener> listeners = new LinkedHashSet<>();
     
+    double getSinPhi() {
+        return Math.sin(this.phi / 180 * Math.PI);
+    }
+    
+    double getCosPhi() {
+        return Math.cos(this.phi / 180 * Math.PI);
+    }
+    
+    double getSinTheta() {
+        return Math.sin(this.theta / 180 * Math.PI);
+    }
+    
+    double getCosTheta() {
+        return Math.cos(this.theta / 180 * Math.PI);
+    }
+
     @Override
     public final void setX(double x) {
         this.x = x;
@@ -146,6 +162,29 @@ public class CameraData implements ReadWritableCamera {
         sb.append("(").append(this.scene.getName()).append(")");
         sb.append("[").append(this.levelOfDetail).append("]");
         return sb.toString();
+    }
+    
+    @Override
+    public void strafeForward(double forward) {
+        final double horizontal = forward * this.getCosTheta();
+        final double vertical = forward * this.getSinTheta();
+        this.z += horizontal * this.getCosPhi();
+        this.y += vertical;
+        this.x += horizontal * -this.getSinPhi();
+        this.fireStateChanged();
+    }
+    
+    @Override
+    public void strafeLeft(double left) {
+        this.x += left * -this.getCosPhi();
+        this.z += left * -this.getSinPhi();
+        this.fireStateChanged();
+    }
+    
+    @Override
+    public void rotateCW(double deltaPhi) {
+        this.phi += deltaPhi;
+        this.fireStateChanged();
     }
 
 }

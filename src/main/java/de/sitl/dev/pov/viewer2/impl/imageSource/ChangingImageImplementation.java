@@ -2,9 +2,11 @@ package de.sitl.dev.pov.viewer2.impl.imageSource;
 
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.WeakHashMap;
 
 import lombok.Data;
 import lombok.Getter;
@@ -54,8 +56,8 @@ public class ChangingImageImplementation implements ChangingImage {
 
     private final ImmutableCamera camera;
     
-    private final Set<ImageChangeListener> changeListeners =
-        new LinkedHashSet<>();
+    private final Set<ImageChangeListener> changeListeners = Collections
+        .newSetFromMap(new WeakHashMap<ImageChangeListener, Boolean>());
     
     @Getter
     boolean aborted = false;
