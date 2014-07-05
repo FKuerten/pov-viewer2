@@ -91,13 +91,24 @@ public class CameraData implements ReadWritableCamera {
     }
     
     @Override
-    public final void setPhi(double phi) {
+    public final void setPhi(double _phi) {
+        @SuppressWarnings("hiding")
+        double phi = _phi;
+        while (phi > 360) {
+            phi -= 360;
+        }
+        while (phi < 0) {
+            phi += 360;
+        }
         this.phi = phi;
         this.fireStateChanged();
     }
     
     @Override
     public final void setTheta(double theta) {
+        if (theta > 90 || theta < -90) {
+            throw new IllegalArgumentException();
+        }
         this.theta = theta;
         this.fireStateChanged();
     }
