@@ -1,18 +1,31 @@
 package de.sitl.dev.pov.viewer2.gui;
 
 import javax.swing.JPanel;
-import javax.swing.JTable;
-import javax.swing.table.AbstractTableModel;
-import javax.swing.table.TableModel;
 
 import de.sitl.dev.pov.viewer2.api.camera.ReadWritableCamera;
 import de.sitl.dev.pov.viewer2.api.roundingcamera.ReadWritableRoundingCamera;
-import de.sitl.dev.pov.viewer2.api.roundingcamera.WritableRoundingCamera;
 
+/**
+ * Display the status of the camera and its rounded view. Also allows modifying
+ * the camera.
+ * 
+ * @author Fabian K&uuml;rten
+ */
 public class CameraStatusView extends JPanel {
     
-    private final JTable dataTable;
+    /**
+     * This table display the data.
+     */
+    private final CameraTable dataTable;
 
+    /**
+     * Creates the status view.
+     * 
+     * @param camera
+     *            the camera
+     * @param roundingCamera
+     *            the rounded view
+     */
     public CameraStatusView(ReadWritableCamera camera,
             ReadWritableRoundingCamera roundingCamera) {
         

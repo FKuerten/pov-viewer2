@@ -10,15 +10,12 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.image.BufferedImage;
-import java.io.IOException;
 import java.util.Collections;
 import java.util.HashSet;
-import java.util.LinkedHashSet;
 import java.util.Set;
 
 import javax.swing.JPanel;
 
-import lombok.RequiredArgsConstructor;
 import de.sitl.dev.pov.viewer2.api.camera.CameraChangeListener;
 import de.sitl.dev.pov.viewer2.api.camera.CameraChangedEvent;
 import de.sitl.dev.pov.viewer2.api.camera.ImmutableCamera;
@@ -28,15 +25,31 @@ import de.sitl.dev.pov.viewer2.api.imageSource.ImageChangeListener;
 import de.sitl.dev.pov.viewer2.api.imageSource.ImageSource;
 import de.sitl.dev.pov.viewer2.api.roundingcamera.ReadableRoundingCamera;
 
+/**
+ * This panel display the rendered images. It also receives keyboard events and
+ * moves the camera.
+ * 
+ * @author Fabian K&uuml;rten
+ */
 public class SceneView extends JPanel {
     
+    /**
+     * Listens for camera changes and resets the image.
+     * 
+     * @author Fabian K&uuml;rten
+     */
     class CameraChangeListenerImplementation implements CameraChangeListener {
         @Override
-        public void stateChanged(CameraChangedEvent event) {
+        public void cameraChanged(CameraChangedEvent event) {
             SceneView.this.resetImage();
         }
     }
     
+    /**
+     * Listens for image changes and repaints the view.
+     * 
+     * @author Fabian K&uuml;rten
+     */
     class ImageChangeListenerImplementation implements ImageChangeListener {
 
         @Override
@@ -46,6 +59,11 @@ public class SceneView extends JPanel {
         
     }
     
+    /**
+     * Listens for resize events and reset the image.
+     * 
+     * @author Fabian K&uuml;rten
+     */
     class PanelComponentListener extends ComponentAdapter {
         
         @Override
@@ -55,6 +73,11 @@ public class SceneView extends JPanel {
         }
     }
     
+    /**
+     * Listens for keyboard events and updates they keyboard state.
+     * 
+     * @author Fabian K&uuml;rten
+     */
     class KeyListenerImplementation extends KeyAdapter {
         
         @SuppressWarnings("boxing")
@@ -71,6 +94,11 @@ public class SceneView extends JPanel {
         
     }
     
+    /**
+     * Listens for mouse events and updates focus.
+     * 
+     * @author Fabian K&uuml;rten
+     */
     class MouseListenerImplementation extends MouseAdapter {
         
         @Override
@@ -80,18 +108,29 @@ public class SceneView extends JPanel {
         
     }
 
+    /**
+     * A runnable to move the camera.
+     * 
+     * @author Fabian K&uuml;rten
+     */
     class KeyRunnable implements Runnable {
         
         @SuppressWarnings("boxing")
         @Override
         public void run() {
+            // short local names for keys and camera
+            @SuppressWarnings("hiding")
             final Set<Integer> keys = SceneView.this.keys;
+            @SuppressWarnings("hiding")
             final ReadWritableCamera camera = SceneView.this.camera;
+            
+            // last update time, initially the start time
             long lastTime = System.currentTimeMillis();
             while (true) {
                 long current = System.currentTimeMillis();
-                long delta = current - lastTime;
-                double dt = delta / 1000d;
+                long delta = current - lastTime; // in ms
+                // dt determines how far we move the camera
+                double dt = delta / 1000d; // in s
                 final boolean forward = keys.contains(KeyEvent.VK_W);
                 final boolean backward = keys.contains(KeyEvent.VK_S);
                 if (forward && !backward) {
@@ -121,41 +160,92 @@ public class SceneView extends JPanel {
                 try {
                     Thread.sleep(50);
                 } catch (InterruptedException e) {
-                    // huh?
+                    // ignored
                 }
             }
         }
     }
 
+    /**
+     * The actual camera change listener.
+     */
     private final CameraChangeListener cameraChangeListener =
         new CameraChangeListenerImplementation();
     
+    /**
+     * The actual image change listener.
+     */
     private final ImageChangeListener imageChangeListener =
         new ImageChangeListenerImplementation();
     
+    /**
+     * The actual resize listener.
+     */
     private final PanelComponentListener componentListener =
         new PanelComponentListener();
     
+    /**
+     * The actual keyboard listener.
+     */
     private final KeyListener keyListener = new KeyListenerImplementation();
     
+    /**
+     * The actual mouse listener.
+     */
     private final MouseListener mouseListener =
         new MouseListenerImplementation();
 
+    /**
+     * The set of keys currently pressed keys.
+     */
     Set<Integer> keys = Collections.synchronizedSet(new HashSet<Integer>());
     
+    /**
+     * They keyboard thread, responsible to moving the camera.
+     */
     private final Thread keyThread;
 
+    /**
+     * The camera we move.
+     */
     final ReadWritableCamera camera;
     
+    /**
+     * The image source.
+     */
     private final ImageSource imageSource;
 
+    /**
+     * The currently active image.
+     */
     private ChangingImage changingImage;
-    private ReadableRoundingCamera roundingCamera;
     
+    /**
+     * The camera we display.
+     */
+    private final ReadableRoundingCamera roundingCamera;
+
+    /**
+     * A lock for synchronization.
+     */
     private final Object[] imageLock = new Object[0];
     
+    /**
+     * Whether we are still active.
+     */
     boolean active = true;
 
+    /**
+     * The constructor. Sets fields, creates listeners, starts the key thread
+     * and resets the image.
+     * 
+     * @param camera
+     *            the camera to move
+     * @param roundingCamera
+     *            the camera to display
+     * @param imageSource
+     *            the image source
+     */
     public SceneView(ReadWritableCamera camera,
             ReadableRoundingCamera roundingCamera, ImageSource imageSource) {
         this.camera = camera;
@@ -171,6 +261,10 @@ public class SceneView extends JPanel {
         this.resetImage();
     }
     
+    /**
+     * Resets the image. Should be called whenever the camera moved or the
+     * viewport changed.
+     */
     void resetImage() {
         final ImmutableCamera immutableCamera =
             this.roundingCamera.getAsImmutableCamera();

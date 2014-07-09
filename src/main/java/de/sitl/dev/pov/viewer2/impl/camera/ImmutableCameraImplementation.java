@@ -6,19 +6,44 @@ import lombok.Getter;
 import de.sitl.dev.pov.viewer2.api.camera.ImmutableCamera;
 import de.sitl.dev.pov.viewer2.api.camera.ReadableCamera;
 import de.sitl.dev.pov.viewer2.api.scene.ImmutableScene;
-import de.sitl.dev.pov.viewer2.api.scene.Scene;
 
+/**
+ * An immutable camera.
+ * 
+ * @author Fabian K&uuml;rten
+ */
 @Data
 public class ImmutableCameraImplementation implements ImmutableCamera {
     
+    /**
+     * Coordinates
+     */
     final double x, y, z;
+    
+    /**
+     * Rotation in degrees.
+     */
     final double phi, theta;
+    
+    /**
+     * Field of view in degrees.
+     */
     final double fOV;
+    
+    /**
+     * Level of detail.
+     */
     final double levelOfDetail;
     
+    /**
+     * Whether we have a spotlight.
+     */
     @Getter(AccessLevel.NONE)
     final private boolean spotlight;
     
+    /**
+     * The scene to display.
+     */
     final private ImmutableScene scene;
     
     @Override
@@ -26,6 +51,12 @@ public class ImmutableCameraImplementation implements ImmutableCamera {
         return this.spotlight;
     }
     
+    /**
+     * Copy constructor.
+     * 
+     * @param camera
+     *            original camera.
+     */
     public ImmutableCameraImplementation(ReadableCamera camera) {
         this.x = camera.getX();
         this.y = camera.getY();

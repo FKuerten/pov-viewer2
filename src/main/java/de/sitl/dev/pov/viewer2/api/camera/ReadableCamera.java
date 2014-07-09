@@ -1,19 +1,10 @@
 package de.sitl.dev.pov.viewer2.api.camera;
 
 import de.sitl.dev.pov.viewer2.api.scene.ReadableScene;
-import de.sitl.dev.pov.viewer2.api.scene.Scene;
 
 /**
- * Base interface for Cameras. Cameras have:
- * <ul>
- * <li>a location &lt;x,y,z&gt;</li>
- * <li>look into a specific direction, defined by theta (up/down) and
- * phi(left/right)</li>
- * <li>a field of view angle</li>
- * <li>level of detail</li>
- * <li>the world they are in</li>
- * <li>a flash light</li>
- * </ul>
+ * Readable cameras allow us to read their state. This interface does not
+ * guarantee anything about mutability.
  * 
  * @author Fabian K&uuml;rten
  */
@@ -70,6 +61,10 @@ public interface ReadableCamera extends Camera {
      */
     public boolean hasSpotlight();
     
+    /**
+     * @return an immutable version of this camera, if this camera is already
+     *         immutable it may return itself
+     */
     ImmutableCamera getAsImmutableCamera();
     
     /**

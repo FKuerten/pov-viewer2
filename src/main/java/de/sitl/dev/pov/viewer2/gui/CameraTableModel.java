@@ -3,7 +3,6 @@ package de.sitl.dev.pov.viewer2.gui;
 import java.util.NoSuchElementException;
 
 import javax.swing.table.AbstractTableModel;
-import javax.swing.table.TableModel;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -14,28 +13,74 @@ import de.sitl.dev.pov.viewer2.api.camera.ReadableCamera;
 import de.sitl.dev.pov.viewer2.api.camera.WritableCamera;
 import de.sitl.dev.pov.viewer2.api.roundingcamera.ReadWritableRoundingCamera;
 
-class CameraTableModel extends AbstractTableModel implements TableModel {
+/**
+ * A table data model for cameras.
+ * 
+ * @author Fabian K&uuml;rten
+ */
+class CameraTableModel extends AbstractTableModel {
     
+    /**
+     * The rows in our table.
+     * 
+     * @author Fabian K&uuml;rten
+     */
     @RequiredArgsConstructor
     private static enum Rows {
+        /**
+         * The header row.
+         */
         HEADER(""), X("x"), Y("y"), Z("z"), PHI("φ"), THETA("θ"), FOV("fov"),
-            SPOTLIGHT("flashlight");
+            SPOTLIGHT("spotlight");
         
         @Getter
         private final String name;
 
+        /**
+         * Helper method to translate row index to Row.
+         * 
+         * @param index
+         *            row index
+         * @return enum element
+         */
         static CameraTableModel.Rows valueOf(int index) {
             return Rows.values()[index];
         }
     }
 
+    /**
+     * Number of rows.
+     */
     static final int ROW_COUNT = Rows.values().length;
+    
+    /***
+     * Number of columns.
+     */
     static final int COLUMN_COUNT = 3;
 
+    /**
+     * The normal camera.
+     */
     private final ReadWritableCamera camera;
+    /**
+     * The rounded camera.
+     */
     private final ReadWritableRoundingCamera roundingCamera;
+    
+    /**
+     * A listener for camera changes, we need to update the view if the camera
+     * changes.
+     */
     private final CameraChangeListener listener;
     
+    /**
+     * Creates the table model
+     * 
+     * @param camera
+     *            the camera
+     * @param roundingCamera
+     *            the rounded view
+     */
     public CameraTableModel(ReadWritableCamera camera,
             ReadWritableRoundingCamera roundingCamera) {
         this.camera = camera;
@@ -43,7 +88,7 @@ class CameraTableModel extends AbstractTableModel implements TableModel {
         this.listener = new CameraChangeListener() {
             
             @Override
-            public void stateChanged(CameraChangedEvent event) {
+            public void cameraChanged(CameraChangedEvent event) {
                 CameraTableModel.this.fireTableRowsUpdated(0, ROW_COUNT - 1);
             }
         };
@@ -51,14 +96,17 @@ class CameraTableModel extends AbstractTableModel implements TableModel {
         this.roundingCamera.addChangeListener(this.listener);
     }
 
+    @Override
     public int getRowCount() {
         return ROW_COUNT;
     }
     
+    @Override
     public final int getColumnCount() {
         return COLUMN_COUNT;
     }
     
+    @Override
     public final String getColumnName(int columnIndex) {
         switch (columnIndex) {
             case 0:
@@ -85,16 +133,17 @@ class CameraTableModel extends AbstractTableModel implements TableModel {
     @SuppressWarnings("boxing")
     @Override
     public Object getValueAt(int rowIndex, int columnIndex) {
-        ReadableCamera camera;
+        // First select for correct camera
+        ReadableCamera currentCamera;
         CameraTableModel.Rows row = Rows.valueOf(rowIndex);
         switch (columnIndex) {
             case 0:
                 return row.getName();
             case 1:
-                camera = this.camera;
+                currentCamera = this.camera;
                 break;
             case 2:
-                camera = this.roundingCamera;
+                currentCamera = this.roundingCamera;
                 break;
             default:
                 throw new IllegalArgumentException();
@@ -103,36 +152,38 @@ class CameraTableModel extends AbstractTableModel implements TableModel {
             case HEADER:
                 return this.getColumnName(columnIndex);
             case X:
-                return camera.getX();
+                return currentCamera.getX();
             case Y:
-                return camera.getY();
+                return currentCamera.getY();
             case Z:
-                return camera.getZ();
+                return currentCamera.getZ();
             case PHI:
-                return camera.getPhi();
+                return currentCamera.getPhi();
             case THETA:
-                return camera.getTheta();
+                return currentCamera.getTheta();
             case FOV:
-                return camera.getFOV();
+                return currentCamera.getFOV();
             case SPOTLIGHT:
-                return camera.hasSpotlight();
+                return currentCamera.hasSpotlight();
             default:
                 throw new IllegalArgumentException();
         }
     }
     
+    @SuppressWarnings("boxing")
     @Override
     public void setValueAt(Object v, int rowIndex, int columnIndex) {
-        WritableCamera camera;
+        // First select the correct camera
+        WritableCamera currentCamera;
         CameraTableModel.Rows row = Rows.valueOf(rowIndex);
         switch (columnIndex) {
             case 0:
                 throw new IllegalArgumentException();
             case 1:
-                camera = this.camera;
+                currentCamera = this.camera;
                 break;
             case 2:
-                camera = this.roundingCamera;
+                currentCamera = this.roundingCamera;
                 break;
             default:
                 throw new IllegalArgumentException();
@@ -141,29 +192,39 @@ class CameraTableModel extends AbstractTableModel implements TableModel {
             case HEADER:
                 throw new IllegalArgumentException();
             case X:
-                camera.setX((Double)v);
+                currentCamera.setX((Double)v);
                 break;
             case Y:
-                camera.setY((Double)v);
+                currentCamera.setY((Double)v);
                 break;
             case Z:
-                camera.setZ((Double)v);
+                currentCamera.setZ((Double)v);
                 break;
             case PHI:
-                camera.setPhi((Double)v);
+                currentCamera.setPhi((Double)v);
                 break;
             case THETA:
-                camera.setTheta((Double)v);
+                currentCamera.setTheta((Double)v);
                 break;
             case FOV:
-                camera.setFOV((Double)v);
+                currentCamera.setFOV((Double)v);
                 break;
             case SPOTLIGHT:
-                camera.setSpotlight((Boolean)v);
+                currentCamera.setSpotlight((Boolean)v);
                 break;
         }
     }
     
+    /**
+     * The default {@link #getColumnClass(int)} method ignores rows. However in
+     * our table the class of a cell also depends on the row.
+     * 
+     * @param rowIndex
+     *            the row index
+     * @param columnIndex
+     *            the column index
+     * @return the class of the cell
+     */
     public Class<?> getCellClass(int rowIndex, int columnIndex) {
         CameraTableModel.Rows row = Rows.valueOf(rowIndex);
         if (columnIndex == 0) {

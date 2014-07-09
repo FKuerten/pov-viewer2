@@ -15,11 +15,30 @@ import lombok.RequiredArgsConstructor;
 import de.sitl.dev.pov.viewer2.api.camera.ImmutableCamera;
 import de.sitl.dev.pov.viewer2.api.scene.ImmutableScene;
 
+/**
+ * An image source for povray.
+ * 
+ * @author Fabian K&uuml;rten
+ */
 @RequiredArgsConstructor
 public class PovRayImageSource extends AbstractImageSource {
     
+    /**
+     * The cache directory.
+     */
     private final File directory;
     
+    /**
+     * Returns a unique string representation of the requested task.
+     * 
+     * @param camera
+     *            the camera
+     * @param w
+     *            width of the image
+     * @param h
+     *            height of the image
+     * @return unique string representation
+     */
     String getBaseName(final ImmutableCamera camera, final int w, final int h) {
         StringBuilder sb = new StringBuilder();
         sb.append(camera.getAsString().replaceAll("/", "."));
@@ -29,10 +48,26 @@ public class PovRayImageSource extends AbstractImageSource {
             .replaceAll("[\\(\\)]", "_");
     }
 
+    /**
+     * Prints the scene information.
+     * 
+     * @param p
+     *            where to print
+     * @param scene
+     *            the scine
+     */
     void printScene(PrintWriter p, ImmutableScene scene) {
         p.format("include \"%s\"", scene.getName()).println();
     }
-
+    
+    /**
+     * Prints the camera information
+     * 
+     * @param p
+     *            where to print
+     * @param c
+     *            the camera
+     */
     @SuppressWarnings("boxing")
     void printCamera(PrintWriter p, ImmutableCamera c) {
         p.println("camera {");
@@ -48,11 +83,33 @@ public class PovRayImageSource extends AbstractImageSource {
         p.println("}");
     }
     
+    /**
+     * Prints a full pov file: An include statement and a camera.
+     * 
+     * @param p
+     *            where to print
+     * @param camera
+     *            the camera.
+     */
     void printPovFile(PrintWriter p, ImmutableCamera camera) {
         this.printScene(p, camera.getScene());
         this.printCamera(p, camera);
     }
     
+    /**
+     * Prints the ini file.
+     * 
+     * @param pw
+     *            where to print
+     * @param w
+     *            the width of the image
+     * @param h
+     *            the height of the image
+     * @param povFileName
+     *            name of the corresponding pov file
+     * @param levelOfDetail
+     *            the level of detail
+     */
     private void printIniFile(PrintWriter pw, final int w, final int h,
             final String povFileName, final double levelOfDetail) {
         pw.println("+W" + w + " +H" + h);
@@ -63,6 +120,25 @@ public class PovRayImageSource extends AbstractImageSource {
         pw.println("Declare=LEVEL_OF_DETAIL=" + levelOfDetail);
     }
     
+    /**
+     * Dumps the ini file to disk
+     * 
+     * @param iniFileName
+     *            the file name
+     * @param w
+     *            the image's width
+     * @param h
+     *            the image's height
+     * @param povFileName
+     *            the pov file name
+     * @param levelOfDetail
+     *            the level of detail
+     * @throws FileNotFoundException
+     *             If the given file object does not denote an existing,
+     *             writable regular file and a new regular file of that name
+     *             cannot be created, or if some other error occurs while
+     *             opening or creating the file
+     */
     private void dumpIniFile(final String iniFileName, final int w,
             final int h, final String povFileName, final double levelOfDetail)
             throws FileNotFoundException {
@@ -77,6 +153,19 @@ public class PovRayImageSource extends AbstractImageSource {
         }
     }
 
+    /**
+     * Dumps the pov file to disk
+     * 
+     * @param fileName
+     *            the pov file's name
+     * @param camera
+     *            the camera
+     * @throws FileNotFoundException
+     *             If the given file object does not denote an existing,
+     *             writable regular file and a new regular file of that name
+     *             cannot be created, or if some other error occurs while
+     *             opening or creating the file
+     */
     private void
             dumpPovFile(final String fileName, final ImmutableCamera camera)
                     throws FileNotFoundException {
@@ -89,7 +178,8 @@ public class PovRayImageSource extends AbstractImageSource {
         }
     }
     
-    boolean hasImage(ImmutableCamera camera, int w, int h) {
+    @Override
+    boolean hasImageInCache(ImmutableCamera camera, int w, int h) {
         final String baseName = getBaseName(camera, w, h);
         final String iniFileName = baseName.concat(".cam.ini");
         final String povFileName = baseName.concat(".cam.pov");
@@ -119,12 +209,24 @@ public class PovRayImageSource extends AbstractImageSource {
         }
     }
     
+    /**
+     * Creates an image if needed. It is needed if it does not exist or is too
+     * old.
+     * 
+     * @param iniFile
+     *            the ini file
+     * @param povFile
+     *            the pov file
+     * @param imageFileName
+     *            the name of the image file
+     * @return the generated or cached image
+     */
     private BufferedImage conditionallyCreateImage(File iniFile, File povFile,
             String imageFileName) {
         boolean needsRebuild = needsRebuild(iniFile, povFile, imageFileName);
         File imageFile = new File(this.directory, imageFileName);
         if (needsRebuild) {
-            this.unconditionallyCreateImage(iniFile, povFile, imageFile);
+            this.unconditionallyCreateImage(iniFile, imageFile);
         }
         for (int i = 0; i < 100; i++ ) {
             if (imageFile.exists()) {
@@ -137,13 +239,24 @@ public class PovRayImageSource extends AbstractImageSource {
                 try {
                     Thread.sleep(10);
                 } catch (InterruptedException e) {
-                    
+                    // ignored
                 }
             }
         }
         throw new Error("No file found.");
     }
     
+    /**
+     * Checks whether the image needs to be created.
+     * 
+     * @param iniFile
+     *            the ini file
+     * @param povFile
+     *            the pov file
+     * @param imageFileName
+     *            the image file's name
+     * @return whether the image needs to created/updated
+     */
     private boolean needsRebuild(File iniFile, File povFile,
             String imageFileName) {
         File imageFile = new File(this.directory, imageFileName);
@@ -161,7 +274,15 @@ public class PovRayImageSource extends AbstractImageSource {
         return true;
     }
     
-    private void unconditionallyCreateImage(File iniFile, File povFile,
+    /**
+     * Unconditionally calls povray to render the image
+     * 
+     * @param iniFile
+     *            the ini file
+     * @param imageFile
+     *            the resulting image file
+     */
+    private void unconditionallyCreateImage(File iniFile,
             File imageFile) {
         List<String> args = new ArrayList<String>();
         args.add("../../render.sh");

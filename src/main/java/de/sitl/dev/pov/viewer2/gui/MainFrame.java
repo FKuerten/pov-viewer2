@@ -10,16 +10,35 @@ import de.sitl.dev.pov.viewer2.api.camera.ReadWritableCamera;
 import de.sitl.dev.pov.viewer2.api.imageSource.ImageSource;
 import de.sitl.dev.pov.viewer2.api.roundingcamera.ReadWritableRoundingCamera;
 
+/**
+ * The main frame of the application.
+ * 
+ * @author Fabian K&uuml;rten
+ */
 public class MainFrame extends JFrame {
     
-    private final ReadWritableCamera camera;
+    /**
+     * Used to display the scene.
+     */
     final SceneView sceneView;
+    
+    /**
+     * Display the status of the camera.
+     */
     private final CameraStatusView cameraStatusView;
     
+    /**
+     * Creates the frame
+     * 
+     * @param camera
+     *            the normal camera
+     * @param roundingCamera
+     *            the rounded view
+     * @param imageSource
+     *            a source for images
+     */
     public MainFrame(ReadWritableCamera camera,
             ReadWritableRoundingCamera roundingCamera, ImageSource imageSource) {
-        this.camera = camera;
-        
         this.setLayout(new BorderLayout());
         this.sceneView = new SceneView(camera, roundingCamera, imageSource);
         this.cameraStatusView = new CameraStatusView(camera, roundingCamera);

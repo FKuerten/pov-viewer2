@@ -1,8 +1,16 @@
 package de.sitl.dev.pov.viewer2.api.camera;
 
-import javax.swing.event.ChangeListener;
-
+/**
+ * Used to listen for {@link CameraChangedEvent}s.
+ * 
+ * @author Fabian K&uuml;rten
+ */
 public interface CameraChangeListener {
     
-    void stateChanged(CameraChangedEvent event);
+    /**
+     * The camera changed.
+     * 
+     * @param event
+     */
+    void cameraChanged(CameraChangedEvent event);
 }

@@ -3,32 +3,57 @@ package de.sitl.dev.pov.viewer2.impl.camera;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
+import de.sitl.dev.pov.viewer2.api.camera.Camera;
 import de.sitl.dev.pov.viewer2.api.camera.CameraChangeListener;
 import de.sitl.dev.pov.viewer2.api.camera.CameraChangedEvent;
 import de.sitl.dev.pov.viewer2.api.camera.ImmutableCamera;
 import de.sitl.dev.pov.viewer2.api.camera.ReadWritableCamera;
 import de.sitl.dev.pov.viewer2.api.camera.ReadableCamera;
-import de.sitl.dev.pov.viewer2.api.scene.ImmutableScene;
 import de.sitl.dev.pov.viewer2.api.scene.ReadableScene;
 import de.sitl.dev.pov.viewer2.api.scene.Scene;
 import lombok.AccessLevel;
 import lombok.Data;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.RequiredArgsConstructor;
 
+/**
+ * Simple data class for {@link Camera}.
+ * 
+ * @author Fabian K&uuml;rten
+ */
 @Data
 @RequiredArgsConstructor
 public class CameraData implements ReadWritableCamera {
     
+    /**
+     * Coordinates
+     */
     double x, y, z;
+    
+    /**
+     * Rotation angles in degrees.
+     */
     double phi, theta;
+    
+    /**
+     * Field of view in degrees.
+     */
     double fOV = 90;
+    
+    /**
+     * Level of detail.
+     */
     double levelOfDetail;
     
+    /**
+     * The spotlight.
+     */
     @Getter(AccessLevel.NONE)
     private boolean spotlight;
     
+    /**
+     * The scene.
+     */
     private final ReadableScene scene;
     
     @Override
@@ -54,20 +79,43 @@ public class CameraData implements ReadWritableCamera {
         this.scene = camera.getScene();
     }
 
+    /**
+     * The change listeners.
+     */
     private Set<CameraChangeListener> listeners = new LinkedHashSet<>();
     
+    /**
+     * Helper function to the the sine of phi.
+     * 
+     * @return sin(phi)
+     */
     double getSinPhi() {
         return Math.sin(this.phi / 180 * Math.PI);
     }
     
+    /**
+     * Helper function to the the cosine of phi.
+     * 
+     * @return cos(phi)
+     */
     double getCosPhi() {
         return Math.cos(this.phi / 180 * Math.PI);
     }
     
+    /**
+     * Helper function to the the sine of theta.
+     * 
+     * @return sin(theta)
+     */
     double getSinTheta() {
         return Math.sin(this.theta / 180 * Math.PI);
     }
     
+    /**
+     * Helper function to the the cosine of theta.
+     * 
+     * @return cos(theta)
+     */
     double getCosTheta() {
         return Math.cos(this.theta / 180 * Math.PI);
     }
@@ -115,6 +163,9 @@ public class CameraData implements ReadWritableCamera {
     
     @Override
     public final void setFOV(double fOV) {
+        if (fOV < 0 || fOV > 180) {
+            throw new IllegalArgumentException();
+        }
         this.fOV = fOV;
         this.fireStateChanged();
     }
@@ -152,7 +203,7 @@ public class CameraData implements ReadWritableCamera {
     private void fireStateChanged() {
         CameraChangedEvent event = new CameraChangedEvent();
         for (CameraChangeListener listener : this.listeners) {
-            listener.stateChanged(event);
+            listener.cameraChanged(event);
         }
     }
 
