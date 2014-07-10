@@ -27,15 +27,26 @@ public class Main {
      *            ignored for now
      */
     public static void main(String[] args) {
+        final int argc = args.length;
+        final String sceneName;
         
+        // First the scene
+        if (argc == 0) {
+            throw new IllegalArgumentException("Need at least a scene name.");
+        } else {
+            sceneName = args[0];
+            if (sceneName == null || sceneName.length() == 0) {
+                throw new IllegalArgumentException("Thats not a scene.");
+            }
+        }
+
         final File directory = new File("target/pov");
         if (!directory.exists()) {
             directory.mkdirs();
         }
-
-        final ReadableScene scene =
-            new SceneData("/home/fabian/data/coding/povray/stone/stone.pov");
         
+        final ReadableScene scene = new SceneData(sceneName);
+
         ReadWritableCamera camera = new CameraData(scene);
         ReadWritableRoundingCamera roundingCamera =
             new RoundedCameraDecorator(camera);
