@@ -39,13 +39,35 @@ public class PovRayImageSource extends AbstractImageSource {
      *            height of the image
      * @return unique string representation
      */
-    String getBaseName(final ImmutableCamera camera, final int w, final int h) {
+    String getBaseName(final ImmutableCamera camera) {
+        String strBase = camera.getAsString();
+        strBase = strBase.replaceAll("/", ".");
+        // strBase = strBase.replaceAll("<", "(");
+        // strBase = strBase.replaceAll(">", ")");
+        strBase = strBase.replaceAll("\\[", "(");
+        strBase = strBase.replaceAll("\\]", ")");
+        strBase = strBase.replaceAll("[\\(\\)]", "_");
+        return strBase;
+    }
+    
+    String getBaseNameWithSizes(final ImmutableCamera camera, final int w,
+            final int h) {
         StringBuilder sb = new StringBuilder();
-        sb.append(camera.getAsString().replaceAll("/", "."));
+        sb.append(this.getBaseName(camera));
         sb.append("@").append(w).append("x").append(h);
-        return sb.toString().replaceAll("@", "at").replaceAll("<", "(")
-            .replaceAll(">", ")").replaceAll("\\[", "(").replaceAll("\\]", ")")
-            .replaceAll("[\\(\\)]", "_");
+        return sb.toString();
+    }
+    
+    String getPovName(final ImmutableCamera camera) {
+        return this.getBaseName(camera).concat(".cam.pov");
+    }
+    
+    String getIniName(final ImmutableCamera camera, final int w, final int h) {
+        return this.getBaseNameWithSizes(camera, w, h).concat(".cam.ini");
+    }
+    
+    String getPngName(final ImmutableCamera camera, final int w, final int h) {
+        return this.getBaseNameWithSizes(camera, w, h).concat(".cam.png");
     }
 
     /**
@@ -54,7 +76,7 @@ public class PovRayImageSource extends AbstractImageSource {
      * @param p
      *            where to print
      * @param scene
-     *            the scine
+     *            the scene
      */
     void printScene(PrintWriter p, ImmutableScene scene) {
         p.format("include \"%s\"", scene.getName()).println();
@@ -73,6 +95,11 @@ public class PovRayImageSource extends AbstractImageSource {
         p.println("camera {");
         {
             p.println("\tperspective");
+            p.format(Locale.ENGLISH, "\tup y / sqrt(image_width/image_height)")
+                .println();
+            p.format(Locale.ENGLISH,
+                "\tright x * sqrt(image_width/image_height)")
+                .println();
             p.format(Locale.ENGLISH, "\tangle %f", c.getFOV()).println();
             p.format(Locale.ENGLISH, "\trotate %f * x", -c.getTheta())
                 .println();
@@ -83,6 +110,24 @@ public class PovRayImageSource extends AbstractImageSource {
         p.println("}");
     }
     
+    @SuppressWarnings("boxing")
+    void printSpotlight(PrintWriter p, ImmutableCamera c) {
+        p.println("light_source {");
+        p.println("\t<0, 0, 0>");
+        p.println("\tcolor White");
+        p.println("\tspotlight");
+        p.println("\tradius 20");
+        p.println("\tfalloff 25");
+        p.println("\ttightness 5");
+        
+        p.println("\tpoint_at <0, 0, 1>");
+        p.format(Locale.ENGLISH, "\trotate %f * x", -c.getTheta()).println();
+        p.format(Locale.ENGLISH, "\trotate %f * y", -c.getPhi()).println();
+        p.format(Locale.ENGLISH, "\ttranslate <%.2f, %.2f, %.2f>", c.getX(),
+            c.getY(), c.getZ()).println();
+        p.println("}");
+    }
+
     /**
      * Prints a full pov file: An include statement and a camera.
      * 
@@ -94,6 +139,9 @@ public class PovRayImageSource extends AbstractImageSource {
     void printPovFile(PrintWriter p, ImmutableCamera camera) {
         this.printScene(p, camera.getScene());
         this.printCamera(p, camera);
+        if (camera.hasSpotlight()) {
+            this.printSpotlight(p, camera);
+        }
     }
     
     /**
@@ -111,9 +159,11 @@ public class PovRayImageSource extends AbstractImageSource {
      *            the level of detail
      */
     private void printIniFile(PrintWriter pw, final int w, final int h,
-            final String povFileName, final double levelOfDetail) {
+            final String povFileName, final String imageFileName,
+            final double levelOfDetail) {
         pw.println("+W" + w + " +H" + h);
         pw.println("Input_File_Name=\"" + povFileName + "\"");
+        pw.format("Output_File_Name=\"%s\"", imageFileName).println();
         // pw.println("Quality=" + );
         // pw.println("Declare=CONFIGURATION=" +
         // this.camera.getConfiguration());
@@ -140,13 +190,13 @@ public class PovRayImageSource extends AbstractImageSource {
      *             opening or creating the file
      */
     private void dumpIniFile(final String iniFileName, final int w,
-            final int h, final String povFileName, final double levelOfDetail)
-            throws FileNotFoundException {
+            final int h, final String povFileName, final String imageFileName,
+            final double levelOfDetail) throws FileNotFoundException {
         assert this.directory.isDirectory();
         File file = new File(this.directory, iniFileName);
         if (!file.exists()) {
             PrintWriter pw = new PrintWriter(file);
-            printIniFile(pw, w, h, povFileName, levelOfDetail);
+            printIniFile(pw, w, h, povFileName, imageFileName, levelOfDetail);
             pw.close();
         } else {
             // System.out.println("skipping file creation");
@@ -180,10 +230,9 @@ public class PovRayImageSource extends AbstractImageSource {
     
     @Override
     boolean hasImageInCache(ImmutableCamera camera, int w, int h) {
-        final String baseName = getBaseName(camera, w, h);
-        final String iniFileName = baseName.concat(".cam.ini");
-        final String povFileName = baseName.concat(".cam.pov");
-        final String imageFileName = baseName.concat(".cam.png");
+        final String povFileName = this.getPovName(camera);
+        final String iniFileName = this.getIniName(camera, w, h);
+        final String imageFileName = this.getPngName(camera, w, h);
         File iniFile = new File(this.directory, iniFileName);
         File povFile = new File(this.directory, povFileName);
         return !this.needsRebuild(iniFile, povFile, imageFileName);
@@ -192,11 +241,10 @@ public class PovRayImageSource extends AbstractImageSource {
     @Override
     BufferedImage getImage(ImmutableCamera camera, int w, int h) {
         try {
-            final String baseName = getBaseName(camera, w, h);
-            final String iniFileName = baseName.concat(".cam.ini");
-            final String povFileName = baseName.concat(".cam.pov");
-            final String imageFileName = baseName.concat(".cam.png");
-            this.dumpIniFile(iniFileName, w, h, povFileName,
+            final String povFileName = this.getPovName(camera);
+            final String iniFileName = this.getIniName(camera, w, h);
+            final String imageFileName = this.getPngName(camera, w, h);
+            this.dumpIniFile(iniFileName, w, h, povFileName, imageFileName,
                 camera.getLevelOfDetail());
             this.dumpPovFile(povFileName, camera);
             
@@ -243,7 +291,7 @@ public class PovRayImageSource extends AbstractImageSource {
                 }
             }
         }
-        throw new Error("No file found.");
+        throw new Error(String.format("File '%s' not found.", imageFileName));
     }
     
     /**
@@ -282,8 +330,7 @@ public class PovRayImageSource extends AbstractImageSource {
      * @param imageFile
      *            the resulting image file
      */
-    private void unconditionallyCreateImage(File iniFile,
-            File imageFile) {
+    private void unconditionallyCreateImage(File iniFile, File imageFile) {
         List<String> args = new ArrayList<String>();
         args.add("../../render.sh");
         args.add("\"" + iniFile.getName() + "\"");
